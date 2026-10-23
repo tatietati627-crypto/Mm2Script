@@ -1,34 +1,39 @@
--- ====================================================================
--- МОЙ ЛИЧНЫЙ СКРИПТ АВТО-ФАРМА ДЛЯ MURDER MYSTERY 2
--- ====================================================================
+-- Загружаем красивую библиотеку интерфейса для мобильных устройств
+local Library = loadstring(game:HttpGet("https://githubusercontent.com"))()
+local Window = Library.CreateLib("MM2 Личный Скрипт", "DarkTheme")
 
--- 1. Подключаем системные службы Roblox
+-- Создаем вкладку в меню
+local MainTab = Window:NewTab("Авто-Фарм")
+local Section = MainTab:NewSection("Основные функции")
+
+-- Переменная, которая отвечает за включение и выключение фарма
+local FarmEnabled = false
+
+-- Подключаем службы Roblox
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
-
 local localPlayer = Players.LocalPlayer
 
--- 2. Функция для плавного и безопасного полета к монете (защита от бана)
+-- Функция безопасного полета
 local function flyTo(targetCFrame)
     local character = localPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
     
     local rootPart = character.HumanoidRootPart
     local distance = (rootPart.Position - targetCFrame.Position).Magnitude
-    local speed = 25 -- Безопасная скорость перемещения
+    local speed = 30 -- Скорость полета
     local duration = distance / speed
     
     local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
     local tween = TweenService:Create(rootPart, {CFrame = targetCFrame}, tweenInfo)
     
     tween:Play()
-    tween.Completed:Wait() -- Скрипт ждет, пока персонаж долетит до точки
+    tween.Completed:Wait()
 end
 
--- 3. Функция поиска монет или конфет на карте раунда
+-- Функция поиска монет
 local function getCoin()
-    -- Проверяем все возможные папки, куда MM2 может спрятать монеты
     local normalCoins = Workspace:FindFirstChild("NormalCoins", true)
     local coinContainer = Workspace:FindFirstChild("CoinContainer", true)
     local candyContainer = Workspace:FindFirstChild("CandyContainer", true)
@@ -37,7 +42,6 @@ local function getCoin()
     
     if container then
         for _, object in pairs(container:GetChildren()) do
-            -- Проверяем, что объект живой и его можно подобрать
             if object:IsA("BasePart") or object:FindFirstChild("CoinVisual") then
                 return object
             end
@@ -46,24 +50,25 @@ local function getCoin()
     return nil
 end
 
--- 4. Главный мотор скрипта — бесконечный цикл фарма
-print("[Мой Скрипт]: Авто-фарм успешно активирован!")
-
-while true do
-    task.wait(0.5) -- Небольшая пауза, чтобы Delta не зависала и не вылетала
+-- Кнопка-переключатель (Toggle) в меню
+Section:NewToggle("Включить Авто-Фарм монет", "Персонаж начнет собирать монеты", function(state)
+    FarmEnabled = state
     
-    local character = localPlayer.Character
-    -- Проверяем, жив ли наш персонаж
-    if character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
-        
-        local targetCoin = getCoin()
-        if targetCoin then
-            -- Приподнимаем точку над монетой на 2 ступени, чтобы не застревать в текстурах пола
-            local targetCFrame = targetCoin.CFrame * CFrame.new(0, 2, 0)
-            
-            -- Летим к цели
-            flyTo(targetCFrame)
-            task.wait(0.1) -- Даем игре время засчитать подбор монеты
-        end
+    -- Запускаем фарм в отдельном потоке, чтобы меню не зависало
+    if FarmEnabled then
+        task.spawn(function()
+            while FarmEnabled do
+                task.wait(0.3)
+                local character = localPlayer.Character
+                if character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
+                    local targetCoin = getCoin()
+                    if targetCoin and FarmEnabled then
+                        local targetCFrame = targetCoin.CFrame * CFrame.new(0, 2, 0)
+                        flyTo(targetCFrame)
+                        task.wait(0.1)
+                    end
+                end
+            end
+        end)
     end
-end
+end)
