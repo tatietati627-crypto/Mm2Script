@@ -1,45 +1,49 @@
--- Загружаем красивую библиотеку интерфейса для мобильных устройств
-local Library = loadstring(game:HttpGet("https://githubusercontent.com"))()
-local Window = Library.CreateLib("MM2 Личный Скрипт", "DarkTheme")
+-- Удаляем старое меню, если оно было, чтобы не плодились кнопки
+if game:GetService("CoreGui"):FindFirstChild("MyMm2FarmUI") then
+    game:GetService("CoreGui").MyMm2FarmUI:Destroy()
+end
 
--- Создаем вкладку в меню
-local MainTab = Window:NewTab("Авто-Фарм")
-local Section = MainTab:NewSection("Основные функции")
+-- Создаем интерфейс прямо через движок Roblox (это сработает везде!)
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
 
--- Переменная, которая отвечает за включение и выключение фарма
+ScreenGui.Name = "MyMm2FarmUI"
+ScreenGui.Parent = game:GetService("CoreGui")
+
+-- Настройки кнопки на экране
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleButton.Position = UDim2.new(0.05, 0, 0.15, 0) -- Кнопка будет слева вверху экрана
+ToggleButton.Size = UDim2.new(0, 160, 0, 50)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Text = "ФАРМ: ВЫКЛ"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 0, 0)
+ToggleButton.TextSize = 18.000
+
+UICorner.Parent = ToggleButton
+
+-- Логика фарма
 local FarmEnabled = false
-
--- Подключаем службы Roblox
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 local localPlayer = Players.LocalPlayer
 
--- Функция безопасного полета
 local function flyTo(targetCFrame)
     local character = localPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    
     local rootPart = character.HumanoidRootPart
     local distance = (rootPart.Position - targetCFrame.Position).Magnitude
-    local speed = 30 -- Скорость полета
-    local duration = distance / speed
-    
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(rootPart, {CFrame = targetCFrame}, tweenInfo)
-    
+    local duration = distance / 25
+    local tween = TweenService:Create(rootPart, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
     tween:Play()
     tween.Completed:Wait()
 end
 
--- Функция поиска монет
 local function getCoin()
-    local normalCoins = Workspace:FindFirstChild("NormalCoins", true)
-    local coinContainer = Workspace:FindFirstChild("CoinContainer", true)
-    local candyContainer = Workspace:FindFirstChild("CandyContainer", true)
-    
-    local container = normalCoins or coinContainer or candyContainer
-    
+    local container = Workspace:FindFirstChild("NormalCoins", true) or Workspace:FindFirstChild("CoinContainer", true) or Workspace:FindFirstChild("CandyContainer", true)
     if container then
         for _, object in pairs(container:GetChildren()) do
             if object:IsA("BasePart") or object:FindFirstChild("CoinVisual") then
@@ -50,12 +54,13 @@ local function getCoin()
     return nil
 end
 
--- Кнопка-переключатель (Toggle) в меню
-Section:NewToggle("Включить Авто-Фарм монет", "Персонаж начнет собирать монеты", function(state)
-    FarmEnabled = state
-    
-    -- Запускаем фарм в отдельном потоке, чтобы меню не зависало
+-- Нажатие на кнопку
+ToggleButton.MouseButton1Click:Connect(function()
+    FarmEnabled = not FarmEnabled
     if FarmEnabled then
+        ToggleButton.Text = "ФАРМ: ВКЛ"
+        ToggleButton.TextColor3 = Color3.fromRGB(0, 255, 0)
+        
         task.spawn(function()
             while FarmEnabled do
                 task.wait(0.3)
@@ -63,12 +68,14 @@ Section:NewToggle("Включить Авто-Фарм монет", "Персон
                 if character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
                     local targetCoin = getCoin()
                     if targetCoin and FarmEnabled then
-                        local targetCFrame = targetCoin.CFrame * CFrame.new(0, 2, 0)
-                        flyTo(targetCFrame)
+                        flyTo(targetCoin.CFrame * CFrame.new(0, 2, 0))
                         task.wait(0.1)
                     end
                 end
             end
         end)
+    else
+        ToggleButton.Text = "ФАРМ: ВЫКЛ"
+        ToggleButton.TextColor3 = Color3.fromRGB(255, 0, 0)
     end
 end)
